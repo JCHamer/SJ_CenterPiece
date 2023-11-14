@@ -4,6 +4,7 @@
 
 #define LED_PIN PICO_DEFAULT_LED_PIN
 #define BTN_PIN 8
+#define LVL_SHIFT_OE_PIN 7
 
 int main() {
 
@@ -14,15 +15,20 @@ int main() {
 	bi_decl(bi_program_description("Test project for Shannon & Jonathan Wedding centerpieces."));
 	bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
 
+	// Config Pico On-Board LED as an output
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
+	// Config CenterPiece On-Board Button as a pull-down button input looking for 3.3V
     gpio_init(BTN_PIN);
     gpio_set_dir(BTN_PIN, GPIO_IN);
-    // We are using the button to pull down to 0v when pressed, so ensure that when
-    // unpressed, it uses internal pull ups. Otherwise when unpressed, the input will
-    // be floating.
     gpio_pull_down(BTN_PIN);
+
+	// Config Level Shifter Output Enable pin
+    gpio_init(LVL_SHIFT_OE_PIN);
+    gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
+	sleep_ms(1);
+	gpio_put(LVL_SHIFT_OE_PIN, 1);
 
     while (true) {
 		unsigned dly = 250;
