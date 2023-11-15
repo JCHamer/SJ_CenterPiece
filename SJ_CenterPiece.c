@@ -9,6 +9,10 @@
 
 #define ENABLE_LVL_SHIFT 0
 
+unsigned dly = 250;
+
+void gpio_btn_isr(uint gpio, uint32_t events);
+
 int main() {
 
 #ifndef PICO_DEFAULT_LED_PIN
@@ -37,12 +41,9 @@ int main() {
 	sleep_ms(1);
 	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
 
-    while (true) {
-		unsigned dly = 250;
-        if (!gpio_get(BTN_PIN)) {
-			dly = 100;
-		}
+    gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_btn_isr);
 
+    while (true) {
 		gpio_put(LED_PIN, 1);
 		gpio_put(NEOPIXEL_PIN, 1);
         sleep_ms(dly);
@@ -52,3 +53,24 @@ int main() {
     }
 #endif
 }
+
+void gpio_btn_isr(uint gpio, uint32_t events) {
+	// NOTE: events is bit-encoded
+	
+	// Level low -- Not activated -2023Nov15jhamermesh
+	//if (events & 0x1) { }
+
+	// Level high -- Not activated -2023Nov15jhamermesh
+	//if (events & 0x2) { }
+
+	// Falling edge
+	if (events & 0x4) {
+		dly = 100;
+	}
+
+	// Rising edge
+	if (events & 0x8) {
+		dly = 500;
+	}
+}
+
