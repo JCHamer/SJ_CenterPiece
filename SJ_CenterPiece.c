@@ -17,7 +17,7 @@ unsigned freq = 3;
 
 void gpio_btn_isr(uint gpio, uint32_t events);
 
-void blink_pin_forever(PIO pio, uint sm, uint offset, uint pin, uint freq);
+void set_blink_pin_freq(PIO pio, uint sm, uint freq);
 
 int main() {
 
@@ -53,15 +53,19 @@ int main() {
     PIO pio = pio0;
     uint offset = pio_add_program(pio, &SJ_CenterPiece_program);
 
-	blink_pin_forever(pio, 0, offset, LED_PIN, 3);
-	blink_pin_forever(pio, 1, offset, NEOPIXEL_PIN, 4);
+    SJ_CenterPiece_program_init(pio, 0, offset, LED_PIN);
+    pio_sm_set_enabled(pio, 0, true);
+
+    SJ_CenterPiece_program_init(pio, 1, offset, NEOPIXEL_PIN);
+    pio_sm_set_enabled(pio, 1, true);
+
+	set_blink_pin_freq(pio, 0, 3);
+	set_blink_pin_freq(pio, 1, 4);
 
 	while (true) {
-
-		// PIO counter program takes 3 more cycles in total than we pass as
-		// input (wait for n + 1; mov; jmp)
-		pio->txf[0] = (clock_get_hz(clk_sys) / (2 * freq)) - 3;
-		pio->txf[1] = (clock_get_hz(clk_sys) / (2 * freq)) - 3;
+		set_blink_pin_freq(pio, 0, freq);
+		set_blink_pin_freq(pio, 1, freq);
+        sleep_ms(100);
 
 		/*
 		gpio_put(LED_PIN, 1);
@@ -97,10 +101,7 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 	}
 }
 
-void blink_pin_forever(PIO pio, uint sm, uint offset, uint pin, uint freq) {
-    SJ_CenterPiece_program_init(pio, sm, offset, pin);
-    pio_sm_set_enabled(pio, sm, true);
-
+void set_blink_pin_freq(PIO pio, uint sm, uint freq) {
     // PIO counter program takes 3 more cycles in total than we pass as
     // input (wait for n + 1; mov; jmp)
     pio->txf[sm] = (clock_get_hz(clk_sys) / (2 * freq)) - 3;
