@@ -22,17 +22,21 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-Wno-maybe-uninitialized)
 endif()
 
-add_executable(SJ_CenterPiece
-	SJ_CenterPiece.c
-)
+add_executable(pio_SJ_CenterPiece)
 
-# create map/bin/hex file etc.
-pico_add_extra_outputs(SJ_CenterPiece)
+# by default the header is generated into the build dir
+pico_generate_pio_header(pio_SJ_CenterPiece ${CMAKE_CURRENT_LIST_DIR}/SJ_CenterPiece.pio)
+# however, alternatively you can choose to generate it somewhere else (in this case in the source tree for check in)
+#pico_generate_pio_header(pio_SJ_CenterPiece ${CMAKE_CURRENT_LIST_DIR}/SJ_CenterPiece.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-# add url via pico_set_program_url
-#example_auto_set_url(blink)
-
+target_sources(pio_SJ_CenterPiece PRIVATE SJ_CenterPiece.c)
 
 # pull in common dependencies
-target_link_libraries(SJ_CenterPiece pico_stdlib)
+target_link_libraries(pio_SJ_CenterPiece PRIVATE pico_stdlib hardware_pio)
+
+# create map/bin/hex file etc.
+pico_add_extra_outputs(pio_SJ_CenterPiece)
+
+# add url via pico_set_program_url
+#example_auto_set_url(pio_SJ_CenterPiece)
 
