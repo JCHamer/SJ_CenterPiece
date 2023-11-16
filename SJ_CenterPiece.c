@@ -13,7 +13,7 @@
 
 #define ENABLE_LVL_SHIFT 0
 
-unsigned dly = 250;
+unsigned freq = 3;
 
 void gpio_btn_isr(uint gpio, uint32_t events);
 
@@ -54,18 +54,24 @@ int main() {
     uint offset = pio_add_program(pio, &SJ_CenterPiece_program);
 
 	blink_pin_forever(pio, 0, offset, LED_PIN, 3);
-	blink_pin_forever(pio, 0, offset, NEOPIXEL_PIN, 4);
+	blink_pin_forever(pio, 1, offset, NEOPIXEL_PIN, 4);
 
-    /*
 	while (true) {
+
+		// PIO counter program takes 3 more cycles in total than we pass as
+		// input (wait for n + 1; mov; jmp)
+		pio->txf[0] = (clock_get_hz(clk_sys) / (2 * freq)) - 3;
+		pio->txf[1] = (clock_get_hz(clk_sys) / (2 * freq)) - 3;
+
+		/*
 		gpio_put(LED_PIN, 1);
 		//gpio_put(NEOPIXEL_PIN, 1);
         sleep_ms(dly);
 		gpio_put(LED_PIN, 0);
 		//gpio_put(NEOPIXEL_PIN, 0);
         sleep_ms(dly);
+		*/
     }
-	*/
 #endif
 }
 
@@ -80,13 +86,13 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 
 	// Falling edge
 	if (events & 0x4) {
-		dly = 100;
+		freq = 1;
 		events &= ~0x4;
 	}
 
 	// Rising edge
 	if (events & 0x8) {
-		dly = 500;
+		freq = 5;
 		events &= ~0x8;
 	}
 }
