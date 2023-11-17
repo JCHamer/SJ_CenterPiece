@@ -1,8 +1,9 @@
+#include <stdlib.h>
+
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
-#include "pico/binary_info.h"
 
 #include "SJ_CenterPiece.pio.h"
 
@@ -17,13 +18,6 @@
 #define ENABLE_LVL_SHIFT 0
 
 unsigned freq = 3;
-unsigned color_idx = 0;
-
-const uint8_t colors[2][3] = {
-	{0x1F,0x30,0x50},
-	{0x30,0x50,0x50}
-};
-const uint max_color = sizeof(colors)/sizeof(colors[0]);
 
 void gpio_btn_isr(uint gpio, uint32_t events);
 
@@ -40,26 +34,41 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
             (uint32_t) (b);
 }
 
-void put_ws2812(uint pstn, uint len, uint color) {
-	uint color_;
-	if (pstn > (len / 2)) {
-		color_ = (color == max_color) ? 0 : (color + 1);
-	}
-	else {
-		color_ = color;
-	}
-
-	put_pixel(urgb_u32(colors[color_][0], colors[color_][1], colors[color_][2]));
+void pattern_snakes(uint len, uint t) {
+    for (uint i = 0; i < len; ++i) {
+        uint x = (i + (t >> 1)) % 64;
+        if (x < 10)
+            put_pixel(urgb_u32(0xff, 0, 0));
+        else if (x >= 15 && x < 25)
+            put_pixel(urgb_u32(0, 0xff, 0));
+        else if (x >= 30 && x < 40)
+            put_pixel(urgb_u32(0, 0, 0xff));
+        else
+            put_pixel(0);
+    }
 }
+
+void pattern_sparkle(uint len, uint t) {
+    if (t % 8)
+        return;
+    for (int i = 0; i < len; ++i)
+        put_pixel(rand() % 16 ? 0 : 0xffffffff);
+}
+
+typedef void (*pattern)(uint len, uint t);
+const struct {
+    pattern pat;
+    const char *name;
+} pattern_table[] = {
+        {pattern_snakes,  "Snakes!"},
+        {pattern_sparkle, "Sparkles"},
+};
 
 int main() {
 
 #ifndef PICO_DEFAULT_LED_PIN
 #warning blink example requires a board with a regular LED
 #else
-
-	bi_decl(bi_program_description("Test project for Shannon & Jonathan Wedding centerpieces."));
-	bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
 
 	// Config Pico On-Board LED as an output
     //gpio_init(LED_PIN);
@@ -93,16 +102,24 @@ int main() {
     ws2812_program_init(pio, 1, ws2812_offset, WS2812_PIN, 800000, IS_RGBW);
 
 	set_blink_pin_freq(pio, 0, 3);
-	set_blink_pin_freq(pio, 1, 4);
 
+    int t = 0;
+	int pat = 0;
 	while (true) {
 		set_blink_pin_freq(pio, 0, freq);
 
-		for (int i = 0; i < NUM_PIXELS; i++) {
-			put_ws2812(i, NUM_PIXELS, color_idx);
-		}
+        int dir = (rand() >> 30) & 1 ? 1 : -1;
+        for (int i = 0; i < 1000; ++i) {
+            pattern_table[pat].pat(NUM_PIXELS, t);
+            sleep_ms(10);
+            t += dir;
+        }
+
+		//for (int i = 0; i < NUM_PIXELS; i++) {
+		//	put_pixel(urgb_u32(0x7F, 0x00, 0x7F));
+		//}
 		
-        sleep_ms(100);
+        //sleep_ms(100);
 
 		/*
 		gpio_put(LED_PIN, 1);
@@ -128,14 +145,14 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 	// Falling edge
 	if (events & 0x4) {
 		freq = 1;
-		color_idx = 0;
+		//color_idx = 0;
 		events &= ~0x4;
 	}
 
 	// Rising edge
 	if (events & 0x8) {
 		freq = 5;
-		color_idx = 1;
+		//color_idx = 1;
 		events &= ~0x8;
 	}
 }
