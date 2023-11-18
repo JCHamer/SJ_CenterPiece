@@ -9,13 +9,13 @@
 
 #define LED_PIN PICO_DEFAULT_LED_PIN
 #define BTN_PIN 8
-//#define LVL_SHIFT_OE_PIN 7
+#define LVL_SHIFT_OE_PIN 7
 
 #define IS_RGBW false
 #define NUM_PIXELS 12
 #define WS2812_PIN 6
 
-//#define ENABLE_LVL_SHIFT 0
+#define ENABLE_LVL_SHIFT 1
 
 unsigned pattern_idx = 0;
 
@@ -94,10 +94,10 @@ int main() {
     gpio_pull_down(BTN_PIN);
 
 	// Config Level Shifter Output Enable pin
-    //gpio_init(LVL_SHIFT_OE_PIN);
-    //gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
-	//sleep_ms(1);
-	//gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
+    gpio_init(LVL_SHIFT_OE_PIN);
+    gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
+	sleep_ms(1);
+	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
 
     gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_btn_isr);
 
