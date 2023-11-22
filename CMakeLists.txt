@@ -31,6 +31,14 @@ pico_generate_pio_header(pio_SJ_CenterPiece ${CMAKE_CURRENT_LIST_DIR}/SJ_CenterP
 
 target_sources(pio_SJ_CenterPiece PRIVATE SJ_CenterPiece.c)
 
+if (TARGET tinyusb_device)
+    # enable usb output, disable uart output
+    pico_enable_stdio_usb(pio_SJ_CenterPiece 1)
+    pico_enable_stdio_uart(pio_SJ_CenterPiece 0)
+elseif(PICO_ON_DEVICE)
+	message(WARNING "not building SJ_CenterPiece because TinyUSB submodule is not initialized in the SDK")
+endif()
+
 # pull in common dependencies
 target_link_libraries(pio_SJ_CenterPiece PRIVATE pico_stdlib hardware_pio)
 

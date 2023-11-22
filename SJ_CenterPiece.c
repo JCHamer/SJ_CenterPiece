@@ -1,3 +1,4 @@
+#include <stdio.h>	// printf
 #include <stdlib.h>	// rand()
 
 #include "pico/stdlib.h"
@@ -83,6 +84,8 @@ int main() {
 //#ifndef PICO_DEFAULT_LED_PIN
 //#warning blink example requires a board with a regular LED
 //#else
+	// Initialize USB StdIO
+    stdio_init_all();
 
 	// Config Pico On-Board LED as an output
     gpio_init(LED_PIN);
@@ -117,6 +120,8 @@ int main() {
             sleep_ms(10);
             t += dir;
         }
+
+        printf("Hello, world!\n");
     }
 //#endif
 }
