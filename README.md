@@ -21,3 +21,8 @@ $ #cmake -DPICO_BOARD=pico_w ..
     - On the final board, you may need to swap a jumper to ensure the system is powered over USB rather than the batteries.
     - You'll first need to get the Pico into it's bootloader, hold down the white button on the Pico while you plug it in via USB and you should see a new device, like `/dev/sdf1`, appear on your system.
     - To drag-and-drop via USB, you'll first mount the RPi Pico as a USB mass storage device, for example, on Manjaro you can use `udiskctl mount -b /dev/sdf1` where you'll replace `sdf1` with the newest device plugged in according to `sudo dmesg`, note the mountpoint provided by udiskctl. Then copy your uf2 file to onto the root of USB device. After copying the file, the Pico will reboot and start running the code. The reboot should also unmount your USB device.
+
+## Serial Comms
+- When the project is built with DEBUG flags set, there will be logging transmitted over the serial port that autopopulates on the Pico USB port
+- To connect to the Pico's USB port you can use a tool like PuTTY or Moserial, you're looking for a new device that showed up when you plugged in the Pico, for example, `/dev/tty/ACM0` on Linux or a new COM number on Windows
+- You'll want to set the baud rate to 115200, 8 data bits, 1 stop bits, no parity, and use a hardware handshake
