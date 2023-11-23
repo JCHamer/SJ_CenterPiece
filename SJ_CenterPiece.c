@@ -18,9 +18,19 @@
 
 #define ENABLE_LVL_SHIFT 1
 
+#define TIMER_DLY_MS 20	// Pixels Update Prd
+struct repeating_timer timer;
+
+#define NUM_TIMER_HITS_NEW_DIR 1000
+unsigned NumTimerHits = 0;
+
+int PstnInCurrPattern = 0;
+int CurrPatternDir = 1;
+
 unsigned pattern_idx = 0;
 
 void gpio_btn_isr(uint gpio, uint32_t events);
+bool timer_isr(struct repeating_timer *t);
 
 static inline void put_pixel(uint32_t pixel_grb) {
     pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
@@ -33,9 +43,9 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
             (uint32_t) (b);
 }
 
-void pattern_snakes(uint len, uint t) {
-    for (uint i = 0; i < len; ++i) {
-        uint x = (i + (t >> 1)) % 64;
+void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
+    for (uint i = 0; i < NumPixels; ++i) {
+        uint x = (i + (PstnInCurrPattern >> 1)) % 64;
         if (x < 10)
             put_pixel(urgb_u32(0xff, 0, 0));
         else if (x >= 15 && x < 25)
@@ -47,30 +57,30 @@ void pattern_snakes(uint len, uint t) {
     }
 }
 
-void pattern_random(uint len, uint t) {
-    if (t % 8)
+void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
+    if (PstnInCurrPattern % 8)
         return;
-    for (int i = 0; i < len; ++i)
+    for (int i = 0; i < NumPixels; ++i)
         put_pixel(rand());
 }
 
-void pattern_sparkle(uint len, uint t) {
-    if (t % 8)
+void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
+    if (PstnInCurrPattern % 8)
         return;
-    for (int i = 0; i < len; ++i)
+    for (int i = 0; i < NumPixels; ++i)
         put_pixel(rand() % 16 ? 0 : 0xffffffff);
 }
 
-void pattern_greys(uint len, uint t) {
+void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
     int max = 100; // let's not draw too much current!
-    t %= max;
-    for (int i = 0; i < len; ++i) {
-        put_pixel(t * 0x10101);
-        if (++t >= max) t = 0;
+    PstnInCurrPattern %= max;
+    for (int i = 0; i < NumPixels; ++i) {
+        put_pixel(PstnInCurrPattern * 0x10101);
+        if (++PstnInCurrPattern >= max) PstnInCurrPattern = 0;
     }
 }
 
-typedef void (*pattern)(uint len, uint t);
+typedef void (*pattern)(uint NumPixels, uint PstnInCurrPattern);
 const pattern pattern_table[] = {
         pattern_snakes,
         pattern_random,
@@ -78,6 +88,7 @@ const pattern pattern_table[] = {
         pattern_greys
 };
 const unsigned pattern_cnt = sizeof(pattern_table)/sizeof(pattern);
+
 
 int main() {
 
@@ -112,16 +123,10 @@ int main() {
 
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW);
 
-    int t = 0;
-	while (true) {
-        int dir = (rand() >> 30) & 1 ? 1 : -1;
-        for (int i = 0; i < 1000; ++i) {
-            pattern_table[pattern_idx](NUM_PIXELS, t);
-            sleep_ms(10);
-            t += dir;
-        }
+	add_repeating_timer_ms(TIMER_DLY_MS, &timer_isr, NULL, &timer);
 
-        printf("Hello, world!\n");
+	while (true) {
+		sleep_ms(100);
     }
 //#endif
 }
@@ -149,5 +154,27 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 
 		events &= ~0x8;
 	}
+}
+
+bool timer_isr(struct repeating_timer *t) {
+	// TODO: #ifdef DEBUG? -2023Nov22jhamermesh
+	//printf("Hello, world from a timer ISR!\n");
+
+	if (NumTimerHits == NUM_TIMER_HITS_NEW_DIR) {
+		int PrevPatternDir = CurrPatternDir;
+		CurrPatternDir = (rand() >> 30) & 1 ? 1 : -1;
+		printf("Updated CurrPatternDir from [%d] to [%d]\n", PrevPatternDir, CurrPatternDir);
+
+		NumTimerHits = 0;
+	}
+	else {
+		NumTimerHits++;
+	}
+
+	pattern_table[pattern_idx](NUM_PIXELS, PstnInCurrPattern);
+
+	PstnInCurrPattern += CurrPatternDir;
+
+	return true;
 }
 
