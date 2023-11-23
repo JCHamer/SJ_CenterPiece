@@ -178,6 +178,11 @@ bool timer_isr(struct repeating_timer *t) {
 		printf("Updated CurrPatternDir from [%d] to [%d]\n", PrevPatternDir, CurrPatternDir);
 
 		NumTimerHits = 0;
+
+		// Check to see if should clear int LED
+		if (!gpio_get(BTN_PIN)) {
+			gpio_put(LED_PIN, 0);
+		}
 	}
 	else {
 		NumTimerHits++;
