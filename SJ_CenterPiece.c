@@ -29,6 +29,9 @@ int CurrPatternDir = 1;
 
 unsigned pattern_idx = 0;
 
+#define MIN_IRQ_DEBOUNCE_DLY_MS 500
+uint32_t PrevBtnTime_ms;
+
 void gpio_btn_isr(uint gpio, uint32_t events);
 bool timer_isr(struct repeating_timer *t);
 
@@ -107,6 +110,8 @@ int main() {
     gpio_set_dir(BTN_PIN, GPIO_IN);
     gpio_pull_down(BTN_PIN);
 
+	PrevBtnTime_ms = to_ms_since_boot(get_absolute_time());
+
 	// Config Level Shifter Output Enable pin
     gpio_init(LVL_SHIFT_OE_PIN);
     gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
@@ -132,16 +137,21 @@ int main() {
 }
 
 void gpio_btn_isr(uint gpio, uint32_t events) {
-	// NOTE: events is bit-encoded
+	// NOTE: Math with CurrTime in ms stored in u32 could have troubles at overflow,
+	// ~50 days of ms ticks should fit into u32, no worries on battery powerd system running for a few hours. -2023Nov23jhamermesh
+	uint32_t CurrTime_ms = to_ms_since_boot(get_absolute_time());
+	int32_t DeltaISR_ms = CurrTime_ms - PrevBtnTime_ms;
+	printf("Button ISR: events[%X], PrevTime[%u], CurrTime[%u]\n", events, PrevBtnTime_ms, CurrTime_ms);
 	
-	// Level low -- Not activated -2023Nov15jhamermesh
-	//if (events & 0x1) { }
-
-	// Level high -- Not activated -2023Nov15jhamermesh
-	//if (events & 0x2) { }
+	if (DeltaISR_ms < MIN_IRQ_DEBOUNCE_DLY_MS) {
+		return;
+	}
+	PrevBtnTime_ms = CurrTime_ms;
 
 	// Falling edge
 	if (events & 0x4) {
+		printf("Button ISR: Button [Release]\n");
+
 		gpio_put(LED_PIN, 0);
 
 		events &= ~0x4;
@@ -149,6 +159,8 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 
 	// Rising edge
 	if (events & 0x8) {
+		printf("Button ISR: Button [Press]\n");
+
 		gpio_put(LED_PIN, 1);
 		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
 
