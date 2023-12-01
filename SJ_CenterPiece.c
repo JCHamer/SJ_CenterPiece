@@ -118,7 +118,7 @@ int main() {
 	sleep_ms(1);
 	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
 
-    gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_btn_isr);
+    gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_btn_isr);
 
     // get free sm
     PIO pio = pio0;
@@ -147,15 +147,6 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 		return;
 	}
 	PrevBtnTime_ms = CurrTime_ms;
-
-	// Falling edge
-	if (events & 0x4) {
-		printf("Button ISR: Button [Release]\n");
-
-		gpio_put(LED_PIN, 0);
-
-		events &= ~0x4;
-	}
 
 	// Rising edge
 	if (events & 0x8) {
