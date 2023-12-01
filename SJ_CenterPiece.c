@@ -141,7 +141,7 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 	// ~50 days of ms ticks should fit into u32, no worries on battery powerd system running for a few hours. -2023Nov23jhamermesh
 	uint32_t CurrTime_ms = to_ms_since_boot(get_absolute_time());
 	int32_t DeltaISR_ms = CurrTime_ms - PrevBtnTime_ms;
-	printf("Button ISR: events[%X], PrevTime[%u], CurrTime[%u]\n", events, PrevBtnTime_ms, CurrTime_ms);
+	//printf("Button ISR: events[%X], PrevTime[%u], CurrTime[%u]\n", events, PrevBtnTime_ms, CurrTime_ms);
 	
 	if (DeltaISR_ms < MIN_IRQ_DEBOUNCE_DLY_MS) {
 		return;
