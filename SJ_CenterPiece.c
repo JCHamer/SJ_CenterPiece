@@ -21,11 +21,15 @@
 #define TIMER_DLY_MS 20	// Pixels Update Prd
 struct repeating_timer timer;
 
-#define NUM_TIMER_HITS_NEW_DIR 1000
+#define NUM_TIMER_HITS_NEW_DIR 500
+#define NUM_TIMER_HITS_NEW_DIR_O4 (NUM_TIMER_HITS_NEW_DIR / 4)
 unsigned NumTimerHits = 0;
 
+// LED Pattern Settings
+#define NUM_PIXELS_IN_RING 6	// Number of pixels making up the loop, the rest are a static element
 int PstnInCurrPattern = 0;
 int CurrPatternDir = 1;
+int RandomizePatternDir = 1;
 
 unsigned pattern_idx = 0;
 
@@ -47,6 +51,8 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
+	RandomizePatternDir = 1;
+
     for (uint i = 0; i < NumPixels; ++i) {
         uint x = (i + (PstnInCurrPattern >> 1)) % 64;
         if (x < 10)
@@ -61,6 +67,8 @@ void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
 }
 
 void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
+	RandomizePatternDir = 1;
+
     if (PstnInCurrPattern % 8)
         return;
     for (int i = 0; i < NumPixels; ++i)
@@ -68,6 +76,8 @@ void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
 }
 
 void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
+	RandomizePatternDir = 1;
+
     if (PstnInCurrPattern % 8)
         return;
     for (int i = 0; i < NumPixels; ++i)
@@ -75,6 +85,8 @@ void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
 }
 
 void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
+	RandomizePatternDir = 1;
+
     int max = 100; // let's not draw too much current!
     PstnInCurrPattern %= max;
     for (int i = 0; i < NumPixels; ++i) {
@@ -83,12 +95,33 @@ void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
     }
 }
 
+void pattern_breathing(uint NumPixels, uint PstnInCurrPattern) {
+	RandomizePatternDir = 0;
+
+	int CurrPstn_ScaledDown;
+	if ((int)PstnInCurrPattern <= NUM_TIMER_HITS_NEW_DIR_O4) {
+		CurrPstn_ScaledDown = 0;
+	}
+	else if ((int)PstnInCurrPattern >= (3 * NUM_TIMER_HITS_NEW_DIR_O4)) {
+		CurrPstn_ScaledDown = 250;
+	}
+	else {
+		CurrPstn_ScaledDown = (PstnInCurrPattern - NUM_TIMER_HITS_NEW_DIR_O4); // let's not draw too much current!
+	}
+
+    for (int i = 0; i < NumPixels; ++i) {
+		// Pixel: as u32 _grb
+        put_pixel(CurrPstn_ScaledDown * 0x10101);
+    }
+}
+
 typedef void (*pattern)(uint NumPixels, uint PstnInCurrPattern);
 const pattern pattern_table[] = {
-        pattern_snakes,
-        pattern_random,
-        pattern_sparkle,
-        pattern_greys
+        //pattern_snakes,
+        //pattern_random,
+        //pattern_sparkle,
+        //pattern_greys,
+		pattern_breathing
 };
 const unsigned pattern_cnt = sizeof(pattern_table)/sizeof(pattern);
 
@@ -102,8 +135,8 @@ int main() {
     stdio_init_all();
 
 	// Config Pico On-Board LED as an output
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
+    //gpio_init(LED_PIN);
+    //gpio_set_dir(LED_PIN, GPIO_OUT);
 
 	// Config CenterPiece On-Board Button as a pull-down button input looking for 3.3V
     gpio_init(BTN_PIN);
@@ -152,7 +185,7 @@ void gpio_btn_isr(uint gpio, uint32_t events) {
 	if (events & 0x8) {
 		printf("Button ISR: Button [Press]\n");
 
-		gpio_put(LED_PIN, 1);
+		//gpio_put(LED_PIN, 1);
 		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
 
 		events &= ~0x8;
@@ -165,15 +198,17 @@ bool timer_isr(struct repeating_timer *t) {
 
 	if (NumTimerHits == NUM_TIMER_HITS_NEW_DIR) {
 		int PrevPatternDir = CurrPatternDir;
-		CurrPatternDir = (rand() >> 30) & 1 ? 1 : -1;
+
+		if (RandomizePatternDir) {
+			CurrPatternDir = (rand() >> 30) & 1 ? 1 : -1;
+		}
+		else {
+			CurrPatternDir = (CurrPatternDir == 1) ? -1 : 1;
+		}
+
 		printf("Updated CurrPatternDir from [%d] to [%d]\n", PrevPatternDir, CurrPatternDir);
 
 		NumTimerHits = 0;
-
-		// Check to see if should clear int LED
-		if (!gpio_get(BTN_PIN)) {
-			gpio_put(LED_PIN, 0);
-		}
 	}
 	else {
 		NumTimerHits++;
@@ -181,7 +216,7 @@ bool timer_isr(struct repeating_timer *t) {
 
 	pattern_table[pattern_idx](NUM_PIXELS, PstnInCurrPattern);
 
-	PstnInCurrPattern += CurrPatternDir;
+	PstnInCurrPattern += CurrPatternDir;	// Incr or Decr PstnInCurrPattern by 1
 
 	return true;
 }
