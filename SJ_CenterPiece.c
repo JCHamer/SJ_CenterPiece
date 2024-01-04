@@ -5,6 +5,7 @@
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
+#include "math.h"
 
 #include "SJ_CenterPiece.pio.h"
 
@@ -22,7 +23,6 @@
 struct repeating_timer timer;
 
 #define NUM_TIMER_HITS_NEW_DIR 500
-#define NUM_TIMER_HITS_NEW_DIR_O4 (NUM_TIMER_HITS_NEW_DIR / 4)
 unsigned NumTimerHits = 0;
 
 // LED Pattern Settings
@@ -98,20 +98,17 @@ void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
 void pattern_breathing(uint NumPixels, uint PstnInCurrPattern) {
 	RandomizePatternDir = 0;
 
-	int CurrPstn_ScaledDown;
-	if ((int)PstnInCurrPattern <= NUM_TIMER_HITS_NEW_DIR_O4) {
-		CurrPstn_ScaledDown = 0;
-	}
-	else if ((int)PstnInCurrPattern >= (3 * NUM_TIMER_HITS_NEW_DIR_O4)) {
-		CurrPstn_ScaledDown = 250;
-	}
-	else {
-		CurrPstn_ScaledDown = (PstnInCurrPattern - NUM_TIMER_HITS_NEW_DIR_O4); // let's not draw too much current!
-	}
+	static const float SmoothnessPts = 500;
+	static const float Gamma = 0.14;
+	static const float Beta = 0.5;
+
+	//float scalar = 255.0 * sqrt(1.0 - pow(abs((2.0*(PstnInCurrPattern/SmoothnessPts)) - 1.0), 2.0));
+	float scalar = 255.0 * (exp(-(pow(((PstnInCurrPattern/SmoothnessPts)-Beta)/Gamma,2.0))/2.0));
 
     for (int i = 0; i < NumPixels; ++i) {
 		// Pixel: as u32 _grb
-        put_pixel(CurrPstn_ScaledDown * 0x10101);
+        //put_pixel(scalar * 0x10101);
+        put_pixel(urgb_u32(scalar, scalar, scalar));
     }
 }
 
