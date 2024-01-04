@@ -26,10 +26,15 @@ struct repeating_timer timer;
 unsigned NumTimerHits = 0;
 
 // LED Pattern Settings
-#define NUM_PIXELS_IN_RING 6	// Number of pixels making up the loop, the rest are a static element
+#define NUM_PIXELS_IN_RING 3	// Number of pixels making up the loop, the rest are a static element
 int PstnInCurrPattern = 0;
 int CurrPatternDir = 1;
-int RandomizePatternDir = 1;
+
+int PstnInBreathing = 0;
+int CurrBreathingDir = 1;
+const float Breathing_SmoothnessPts = 500;
+const float Breathing_Gamma = 0.14;
+const float Breathing_Beta = 0.5;
 
 unsigned pattern_idx = 0;
 
@@ -50,25 +55,35 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
             (uint32_t) (b);
 }
 
+static inline uint32_t breathe_pixel() {
+	float pwm_val = 255.0 * (exp(-(pow(((PstnInBreathing/Breathing_SmoothnessPts)-Breathing_Beta)/Breathing_Gamma,2.0))/2.0));
+	unsigned scalar = (uint8_t)pwm_val;
+
+	return (scalar * 0x10101);
+}
+
 void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
-	RandomizePatternDir = 1;
+	uint32_t breathe_val = breathe_pixel(PstnInBreathing);
 
     for (uint i = 0; i < NumPixels; ++i) {
-        uint x = (i + (PstnInCurrPattern >> 1)) % 64;
-        if (x < 10)
-            put_pixel(urgb_u32(0xff, 0, 0));
-        else if (x >= 15 && x < 25)
-            put_pixel(urgb_u32(0, 0xff, 0));
-        else if (x >= 30 && x < 40)
-            put_pixel(urgb_u32(0, 0, 0xff));
-        else
-            put_pixel(0);
+		if (i >= NUM_PIXELS_IN_RING) {
+			put_pixel(breathe_val);
+		}
+		else {
+			uint x = (i + (PstnInCurrPattern >> 1)) % 64;
+			if (x < 10)
+				put_pixel(urgb_u32(0xff, 0, 0));
+			else if (x >= 15 && x < 25)
+				put_pixel(urgb_u32(0, 0xff, 0));
+			else if (x >= 30 && x < 40)
+				put_pixel(urgb_u32(0, 0, 0xff));
+			else
+				put_pixel(0);
+		}
     }
 }
 
 void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
-	RandomizePatternDir = 1;
-
     if (PstnInCurrPattern % 8)
         return;
     for (int i = 0; i < NumPixels; ++i)
@@ -76,8 +91,6 @@ void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
 }
 
 void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
-	RandomizePatternDir = 1;
-
     if (PstnInCurrPattern % 8)
         return;
     for (int i = 0; i < NumPixels; ++i)
@@ -85,8 +98,6 @@ void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
 }
 
 void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
-	RandomizePatternDir = 1;
-
     int max = 100; // let's not draw too much current!
     PstnInCurrPattern %= max;
     for (int i = 0; i < NumPixels; ++i) {
@@ -95,30 +106,22 @@ void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
     }
 }
 
-void pattern_breathing(uint NumPixels, uint PstnInCurrPattern) {
-	RandomizePatternDir = 0;
-
-	static const float SmoothnessPts = 500;
-	static const float Gamma = 0.14;
-	static const float Beta = 0.5;
-
-	//float scalar = 255.0 * sqrt(1.0 - pow(abs((2.0*(PstnInCurrPattern/SmoothnessPts)) - 1.0), 2.0));
-	float scalar = 255.0 * (exp(-(pow(((PstnInCurrPattern/SmoothnessPts)-Beta)/Gamma,2.0))/2.0));
+void pattern_breathing(uint NumPixels, uint) {
+	uint32_t breathe_val = breathe_pixel(PstnInBreathing);
 
     for (int i = 0; i < NumPixels; ++i) {
 		// Pixel: as u32 _grb
-        //put_pixel(scalar * 0x10101);
-        put_pixel(urgb_u32(scalar, scalar, scalar));
+        put_pixel(breathe_val);
     }
 }
 
 typedef void (*pattern)(uint NumPixels, uint PstnInCurrPattern);
 const pattern pattern_table[] = {
-        //pattern_snakes,
+		pattern_breathing,
+        pattern_snakes
         //pattern_random,
         //pattern_sparkle,
         //pattern_greys,
-		pattern_breathing
 };
 const unsigned pattern_cnt = sizeof(pattern_table)/sizeof(pattern);
 
@@ -196,12 +199,8 @@ bool timer_isr(struct repeating_timer *t) {
 	if (NumTimerHits == NUM_TIMER_HITS_NEW_DIR) {
 		int PrevPatternDir = CurrPatternDir;
 
-		if (RandomizePatternDir) {
-			CurrPatternDir = (rand() >> 30) & 1 ? 1 : -1;
-		}
-		else {
-			CurrPatternDir = (CurrPatternDir == 1) ? -1 : 1;
-		}
+		CurrPatternDir = (rand() >> 30) & 1 ? 1 : -1;			// Sometimes toggle
+		CurrBreathingDir = (CurrBreathingDir == 1) ? -1 : 1;	// Always toggle
 
 		printf("Updated CurrPatternDir from [%d] to [%d]\n", PrevPatternDir, CurrPatternDir);
 
@@ -214,6 +213,7 @@ bool timer_isr(struct repeating_timer *t) {
 	pattern_table[pattern_idx](NUM_PIXELS, PstnInCurrPattern);
 
 	PstnInCurrPattern += CurrPatternDir;	// Incr or Decr PstnInCurrPattern by 1
+	PstnInBreathing += CurrBreathingDir;	// Incr or Decr PstnInBreathing by 1
 
 	return true;
 }
