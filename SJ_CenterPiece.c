@@ -14,7 +14,7 @@
 #define LVL_SHIFT_OE_PIN 7
 
 #define IS_RGBW false
-#define NUM_PIXELS 12
+#define NUM_PIXELS 8
 #define WS2812_PIN 6
 
 #define ENABLE_LVL_SHIFT 1
@@ -55,31 +55,30 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
             (uint32_t) (b);
 }
 
-static inline uint32_t breathe_pixel() {
+static inline uint8_t get_breathe_scalar() {
 	float pwm_val = 255.0 * (exp(-(pow(((PstnInBreathing/Breathing_SmoothnessPts)-Breathing_Beta)/Breathing_Gamma,2.0))/2.0));
-	unsigned scalar = (uint8_t)pwm_val;
 
-	return (scalar * 0x10101);
+	return (uint8_t)pwm_val;
 }
 
 void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
-	uint32_t breathe_val = breathe_pixel(PstnInBreathing);
+	uint32_t breathe_scalar = get_breathe_scalar(PstnInBreathing);
 
     for (uint i = 0; i < NumPixels; ++i) {
 		if (i >= NUM_PIXELS_IN_RING) {
-			put_pixel(breathe_val);
+			put_pixel(breathe_scalar * 0x10101);
+			continue;
 		}
-		else {
-			uint x = (i + (PstnInCurrPattern >> 1)) % 64;
-			if (x < 10)
-				put_pixel(urgb_u32(0xff, 0, 0));
-			else if (x >= 15 && x < 25)
-				put_pixel(urgb_u32(0, 0xff, 0));
-			else if (x >= 30 && x < 40)
-				put_pixel(urgb_u32(0, 0, 0xff));
-			else
-				put_pixel(0);
-		}
+
+		uint x = (i + (PstnInCurrPattern >> 3)) % 64;
+		if (x < 10)
+			put_pixel(urgb_u32(0xff, 0, 0));
+		else if (x >= 15 && x < 25)
+			put_pixel(urgb_u32(0, 0xff, 0));
+		else if (x >= 30 && x < 40)
+			put_pixel(urgb_u32(0, 0, 0xff));
+		else
+			put_pixel(0);
     }
 }
 
@@ -107,7 +106,7 @@ void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
 }
 
 void pattern_breathing(uint NumPixels, uint) {
-	uint32_t breathe_val = breathe_pixel(PstnInBreathing);
+	uint32_t breathe_val = 0x10101 * get_breathe_scalar(PstnInBreathing);
 
     for (int i = 0; i < NumPixels; ++i) {
 		// Pixel: as u32 _grb
