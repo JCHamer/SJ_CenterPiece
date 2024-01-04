@@ -61,6 +61,15 @@ static inline uint8_t get_breathe_scalar() {
 	return (uint8_t)pwm_val;
 }
 
+void pattern_breathing(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x10101 * get_breathe_scalar(PstnInBreathing);
+
+    for (int i = 0; i < NumPixels; ++i) {
+		// Pixel: as u32 _grb
+        put_pixel(breathe_val);
+    }
+}
+
 void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
 	uint32_t breathe_scalar = get_breathe_scalar(PstnInBreathing);
 
@@ -70,43 +79,65 @@ void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
 			continue;
 		}
 
-		uint x = (i + (PstnInCurrPattern >> 3)) % 64;
-		if (x < 10)
+		uint x = (i + (PstnInCurrPattern >> 2)) % 64;
+		if (x < 15)
 			put_pixel(urgb_u32(0xff, 0, 0));
-		else if (x >= 15 && x < 25)
+		else if (x >= 20 && x < 35)
 			put_pixel(urgb_u32(0, 0xff, 0));
-		else if (x >= 30 && x < 40)
+		else if (x >= 40 && x < 55)
 			put_pixel(urgb_u32(0, 0, 0xff));
 		else
 			put_pixel(0);
     }
 }
 
-void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
-    if (PstnInCurrPattern % 8)
-        return;
-    for (int i = 0; i < NumPixels; ++i)
-        put_pixel(rand());
-}
+void pattern_breathing_color_r(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x00100 * get_breathe_scalar(PstnInBreathing);
 
-void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
-    if (PstnInCurrPattern % 8)
-        return;
-    for (int i = 0; i < NumPixels; ++i)
-        put_pixel(rand() % 16 ? 0 : 0xffffffff);
-}
-
-void pattern_greys(uint NumPixels, uint PstnInCurrPattern) {
-    int max = 100; // let's not draw too much current!
-    PstnInCurrPattern %= max;
     for (int i = 0; i < NumPixels; ++i) {
-        put_pixel(PstnInCurrPattern * 0x10101);
-        if (++PstnInCurrPattern >= max) PstnInCurrPattern = 0;
+		// Pixel: as u32 _grb
+        put_pixel(breathe_val);
     }
 }
 
-void pattern_breathing(uint NumPixels, uint) {
-	uint32_t breathe_val = 0x10101 * get_breathe_scalar(PstnInBreathing);
+void pattern_breathing_color_y(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x10100 * get_breathe_scalar(PstnInBreathing);
+
+    for (int i = 0; i < NumPixels; ++i) {
+		// Pixel: as u32 _grb
+        put_pixel(breathe_val);
+    }
+}
+
+void pattern_breathing_color_g(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x10000 * get_breathe_scalar(PstnInBreathing);
+
+    for (int i = 0; i < NumPixels; ++i) {
+		// Pixel: as u32 _grb
+        put_pixel(breathe_val);
+    }
+}
+
+void pattern_breathing_color_c(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x10001 * get_breathe_scalar(PstnInBreathing);
+
+    for (int i = 0; i < NumPixels; ++i) {
+		// Pixel: as u32 _grb
+        put_pixel(breathe_val);
+    }
+}
+
+void pattern_breathing_color_b(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x00001 * get_breathe_scalar(PstnInBreathing);
+
+    for (int i = 0; i < NumPixels; ++i) {
+		// Pixel: as u32 _grb
+        put_pixel(breathe_val);
+    }
+}
+
+void pattern_breathing_color_m(uint NumPixels, uint) {
+	uint32_t breathe_val = 0x00101 * get_breathe_scalar(PstnInBreathing);
 
     for (int i = 0; i < NumPixels; ++i) {
 		// Pixel: as u32 _grb
@@ -117,13 +148,15 @@ void pattern_breathing(uint NumPixels, uint) {
 typedef void (*pattern)(uint NumPixels, uint PstnInCurrPattern);
 const pattern pattern_table[] = {
 		pattern_breathing,
-        pattern_snakes
-        //pattern_random,
-        //pattern_sparkle,
-        //pattern_greys,
+        pattern_snakes,
+		pattern_breathing_color_r,
+		pattern_breathing_color_y,
+		pattern_breathing_color_g,
+		pattern_breathing_color_c,
+		pattern_breathing_color_b,
+		pattern_breathing_color_m
 };
 const unsigned pattern_cnt = sizeof(pattern_table)/sizeof(pattern);
-
 
 int main() {
 
