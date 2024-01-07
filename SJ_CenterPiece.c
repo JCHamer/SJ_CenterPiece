@@ -17,7 +17,7 @@
 #define LVL_SHIFT_OE_PIN 7
 
 #define IS_RGBW false
-#define NUM_PIXELS 8
+#define NUM_PIXELS 6
 #define WS2812_PIN 6
 
 #define ENABLE_LVL_SHIFT 1
