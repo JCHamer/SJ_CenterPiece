@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
+include(pico_extras_import.cmake)
 
 project(SJ_CenterPiece C CXX ASM)
 set(CMAKE_C_STANDARD 11)
@@ -40,7 +41,7 @@ elseif(PICO_ON_DEVICE)
 endif()
 
 # pull in common dependencies
-target_link_libraries(pio_SJ_CenterPiece PRIVATE pico_stdlib hardware_pio)
+target_link_libraries(pio_SJ_CenterPiece PRIVATE pico_stdlib hardware_pio hardware_sleep)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(pio_SJ_CenterPiece)
