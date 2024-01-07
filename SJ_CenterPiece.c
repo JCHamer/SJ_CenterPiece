@@ -1,10 +1,13 @@
 #include <stdio.h>	// printf
 #include <stdlib.h>	// rand()
 
+#include "pico/sleep.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
+#include "hardware/rosc.h"
+#include "hardware/structs/scb.h"
 #include "math.h"
 
 #include "SJ_CenterPiece.pio.h"
@@ -158,6 +161,23 @@ const pattern pattern_table[] = {
 };
 const unsigned pattern_cnt = sizeof(pattern_table)/sizeof(pattern);
 
+void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig){
+
+    //Re-enable ring Oscillator control
+    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_LSB);
+
+    //reset procs back to default
+    scb_hw->scr = scb_orig;
+    clocks_hw->sleep_en0 = clock0_orig;
+    clocks_hw->sleep_en1 = clock1_orig;
+
+    //reset clocks
+    clocks_init();
+    stdio_init_all();
+
+    return;
+}
+
 int main() {
 
 //#ifndef PICO_DEFAULT_LED_PIN
@@ -167,8 +187,8 @@ int main() {
     stdio_init_all();
 
 	// Config Pico On-Board LED as an output
-    //gpio_init(LED_PIN);
-    //gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
 
 	// Config CenterPiece On-Board Button as a pull-down button input looking for 3.3V
     gpio_init(BTN_PIN);
@@ -183,6 +203,19 @@ int main() {
 	sleep_ms(1);
 	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
 
+    //Save clocks for restoring from sleep later
+    uint scb_orig = scb_hw->scr;
+    uint clock0_orig = clocks_hw->sleep_en0;
+    uint clock1_orig = clocks_hw->sleep_en1;
+
+	// Go to sleep
+	//sleep_run_from_xosc()
+	sleep_goto_dormant_until_pin(BTN_PIN, true, true);	// gpio_pin, bool edge, bool high
+	
+	// Recover from sleep
+	recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
+
+	// Connect button handler to receive button presses and advance the light pattern
     gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_btn_isr);
 
     // get free sm
