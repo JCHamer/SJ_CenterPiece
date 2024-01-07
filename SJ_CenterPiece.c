@@ -185,6 +185,8 @@ int main() {
 //#else
 	// Initialize USB StdIO
     stdio_init_all();
+    printf("Startup...\n");
+    //uart_default_tx_wait_blocking();
 
 	// Config Pico On-Board LED as an output
     gpio_init(LED_PIN);
@@ -195,13 +197,10 @@ int main() {
     gpio_set_dir(BTN_PIN, GPIO_IN);
     gpio_pull_down(BTN_PIN);
 
-	PrevBtnTime_ms = to_ms_since_boot(get_absolute_time());
-
-	// Config Level Shifter Output Enable pin
-    gpio_init(LVL_SHIFT_OE_PIN);
-    gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
-	sleep_ms(1);
-	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
+	// Blink to indicate booted
+	gpio_put(LED_PIN, 1);
+	sleep_ms(1000);
+	gpio_put(LED_PIN, 0);
 
     //Save clocks for restoring from sleep later
     uint scb_orig = scb_hw->scr;
@@ -209,13 +208,26 @@ int main() {
     uint clock1_orig = clocks_hw->sleep_en1;
 
 	// Go to sleep
-	//sleep_run_from_xosc()
+    printf("Going to sleep...\n");
+    //uart_default_tx_wait_blocking();
+
+	sleep_run_from_xosc();
 	sleep_goto_dormant_until_pin(BTN_PIN, true, true);	// gpio_pin, bool edge, bool high
 	
 	// Recover from sleep
 	recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
 
+    printf("Recovered...\n");
+    //uart_default_tx_wait_blocking();
+
+	// Config Level Shifter Output Enable pin
+    gpio_init(LVL_SHIFT_OE_PIN);
+    gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
+	sleep_ms(1);
+	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
+
 	// Connect button handler to receive button presses and advance the light pattern
+	PrevBtnTime_ms = to_ms_since_boot(get_absolute_time());
     gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_btn_isr);
 
     // get free sm
