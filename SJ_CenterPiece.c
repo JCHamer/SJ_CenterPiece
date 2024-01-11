@@ -29,7 +29,7 @@ struct repeating_timer timer;
 unsigned NumTimerHits = 0;
 
 // LED Pattern Settings
-#define NUM_PIXELS_IN_RING 3	// Number of pixels making up the loop, the rest are a static element
+#define NUM_PIXELS_IN_RING 6	// Number of pixels making up the loop, the rest are a static element
 int PstnInCurrPattern = 0;
 int CurrPatternDir = 1;
 
@@ -94,6 +94,20 @@ void pattern_snakes(uint NumPixels, uint PstnInCurrPattern) {
     }
 }
 
+void pattern_random(uint NumPixels, uint PstnInCurrPattern) {
+    if (PstnInCurrPattern % 8)
+        return;
+    for (int i = 0; i < NumPixels; ++i)
+        put_pixel(rand());
+}
+
+void pattern_sparkle(uint NumPixels, uint PstnInCurrPattern) {
+    if (PstnInCurrPattern % 8)
+        return;
+    for (int i = 0; i < NumPixels; ++i)
+        put_pixel(rand() % 16 ? 0 : 0xffffffff);
+}
+
 void pattern_breathing_color_r(uint NumPixels, uint) {
 	uint32_t breathe_val = 0x00100 * get_breathe_scalar(PstnInBreathing);
 
@@ -152,6 +166,8 @@ typedef void (*pattern)(uint NumPixels, uint PstnInCurrPattern);
 const pattern pattern_table[] = {
 		pattern_breathing,
         pattern_snakes,
+        pattern_random,
+        pattern_sparkle,
 		pattern_breathing_color_r,
 		pattern_breathing_color_y,
 		pattern_breathing_color_g,
@@ -227,6 +243,9 @@ int main() {
 	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
 
 	// Connect button handler to receive button presses and advance the light pattern
+    gpio_init(BTN_PIN);
+    gpio_set_dir(BTN_PIN, GPIO_IN);
+    gpio_pull_down(BTN_PIN);
 	PrevBtnTime_ms = to_ms_since_boot(get_absolute_time());
     gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_btn_isr);
 
