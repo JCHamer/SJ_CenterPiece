@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
+# Configure using boards/jchamer_rp2040_16mb.h
+set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards)
+set(PICO_BOARD jchamer_rp2040_16mb)
+
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
 include(pico_extras_import.cmake)

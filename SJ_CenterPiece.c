@@ -5,22 +5,19 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
-#include "hardware/clocks.h"
+#include "pico/runtime_init.h"
 #include "hardware/rosc.h"
 #include "hardware/structs/scb.h"
 #include "math.h"
 
 #include "SJ_CenterPiece.pio.h"
 
-#define LED_PIN PICO_DEFAULT_LED_PIN
+//#define LED_PIN PICO_DEFAULT_LED_PIN
 #define BTN_PIN 8
-#define LVL_SHIFT_OE_PIN 7
 
 #define IS_RGBW false
-#define NUM_PIXELS 6
+#define NUM_PIXELS 3
 #define WS2812_PIN 6
-
-#define ENABLE_LVL_SHIFT 1
 
 #define TIMER_DLY_MS 20	// Pixels Update Prd
 struct repeating_timer timer;
@@ -188,7 +185,7 @@ void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig){
     clocks_hw->sleep_en1 = clock1_orig;
 
     //reset clocks
-    clocks_init();
+    runtime_init_clocks();
     stdio_init_all();
 
     return;
@@ -205,8 +202,8 @@ int main() {
     //uart_default_tx_wait_blocking();
 
 	// Config Pico On-Board LED as an output
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
+    // gpio_init(LED_PIN);
+    // gpio_set_dir(LED_PIN, GPIO_OUT);
 
 	// Config CenterPiece On-Board Button as a pull-down button input looking for 3.3V
     gpio_init(BTN_PIN);
@@ -214,9 +211,9 @@ int main() {
     gpio_pull_down(BTN_PIN);
 
 	// Blink to indicate booted
-	gpio_put(LED_PIN, 1);
-	sleep_ms(1000);
-	gpio_put(LED_PIN, 0);
+	// gpio_put(LED_PIN, 1);
+	// sleep_ms(1000);
+	// gpio_put(LED_PIN, 0);
 
     //Save clocks for restoring from sleep later
     uint scb_orig = scb_hw->scr;
@@ -235,12 +232,6 @@ int main() {
 
     printf("Recovered...\n");
     //uart_default_tx_wait_blocking();
-
-	// Config Level Shifter Output Enable pin
-    gpio_init(LVL_SHIFT_OE_PIN);
-    gpio_set_dir(LVL_SHIFT_OE_PIN, GPIO_OUT);
-	sleep_ms(1);
-	gpio_put(LVL_SHIFT_OE_PIN, ENABLE_LVL_SHIFT);
 
 	// Connect button handler to receive button presses and advance the light pattern
     gpio_init(BTN_PIN);
