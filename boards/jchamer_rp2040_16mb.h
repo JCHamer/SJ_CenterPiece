@@ -19,6 +19,11 @@ pico_board_cmake_set(PICO_PLATFORM, rp2040)
 // For board detection
 #define JCHAMER_RP2040_16MB
 
+// --- WS2812 ---
+#ifndef PICO_DEFAULT_WS2812_PIN
+#define PICO_DEFAULT_WS2812_PIN 6
+#endif
+
 /*
 // --- UART ---
 #ifndef PICO_DEFAULT_UART
