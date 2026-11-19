@@ -136,6 +136,17 @@ int main() {
 
 #if DIODE_DIRECTION == ROW2COL
 	gpio_init(COL1_PIN);
+	gpio_set_dir(COL1_PIN, GPIO_OUT);
+	gpio_put(COL1_PIN, 1);
+
+	gpio_init(ROW1_PIN);
+	gpio_init(ROW2_PIN);
+	gpio_set_dir(ROW1_PIN, GPIO_IN);
+	gpio_set_dir(ROW2_PIN, GPIO_IN);
+	gpio_pull_up(ROW1_PIN);
+	gpio_pull_up(ROW2_PIN);
+#elif DIODE_DIRECTION == COL2ROW
+	gpio_init(COL1_PIN);
 	gpio_set_dir(COL1_PIN, GPIO_IN);
 	gpio_pull_up(COL1_PIN);
 
@@ -145,17 +156,6 @@ int main() {
 	gpio_set_dir(ROW2_PIN, GPIO_OUT);
 	gpio_put(ROW1_PIN, 1);
 	gpio_put(ROW2_PIN, 1);
-#elif DIODE_DIRECTION == COL2ROW
-	gpio_init(COL1_PIN);
-	gpio_set_dir(COL1_PIN, GPIO_OUT);
-	gpio_put(COL1_PIN, 0);
-
-	gpio_init(ROW1_PIN);
-	gpio_init(ROW2_PIN);
-	gpio_set_dir(ROW1_PIN, GPIO_IN);
-	gpio_set_dir(ROW2_PIN, GPIO_IN);
-	gpio_pull_up(ROW1_PIN);
-	gpio_pull_up(ROW2_PIN);
 #endif
 
 	// Connect button handler to receive button presses and advance the light pattern
@@ -173,7 +173,7 @@ int main() {
 	add_repeating_timer_ms(TIMER_DLY_MS, &timer_isr, NULL, &timer);
 
 	while (true) {
-		sleep_ms(249);
+		sleep_ms(248);
 		scan_matrix();
     }
 }
@@ -191,26 +191,28 @@ void scan_matrix() {
 	// PrevBtnTime_ms = CurrTime_ms;
 
 #if DIODE_DIRECTION == ROW2COL
+	gpio_put(COL1_PIN, 0);
+	sleep_ms(2);
+	if (gpio_get(!ROW1_PIN)) {
+		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
+	}
+	if (gpio_get(!ROW2_PIN)) {
+		pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
+	}
+	gpio_put(COL1_PIN, 1);
+#elif DIODE_DIRECTION == COL2ROW
 	gpio_put(ROW1_PIN, 0);
-	if (gpio_get(COL1_PIN)) {
+	sleep_ms(1);
+	if (!gpio_get(COL1_PIN)) {
 		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
 	}
 	gpio_put(ROW1_PIN, 1);
 	gpio_put(ROW2_PIN, 0);
-	if (gpio_get(COL1_PIN)) {
+	sleep_ms(1);
+	if (!gpio_get(COL1_PIN)) {
 		pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
 	}
 	gpio_put(ROW2_PIN, 1);
-#elif DIODE_DIRECTION == COL2ROW
-	gpio_put(COL1_PIN, 0);
-	sleep_ms(1);
-	if (gpio_get(ROW1_PIN)) {
-		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
-	}
-	if (gpio_get(ROW2_PIN)) {
-		pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
-	}
-	gpio_put(COL1_PIN, 1);
 #endif
 }
 
