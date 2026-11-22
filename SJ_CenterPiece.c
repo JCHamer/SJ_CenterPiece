@@ -149,6 +149,7 @@ int main() {
 	gpio_init(COL1_PIN);
 	gpio_set_dir(COL1_PIN, GPIO_IN);
 	gpio_pull_up(COL1_PIN);
+	//gpio_pull_down(COL1_PIN);
 
 	gpio_init(ROW1_PIN);
 	gpio_init(ROW2_PIN);
@@ -170,10 +171,10 @@ int main() {
 
     ws2812_program_init(pio, sm, offset, PICO_DEFAULT_WS2812_PIN, 800000, IS_RGBW);
 
-	add_repeating_timer_ms(TIMER_DLY_MS, &timer_isr, NULL, &timer);
+	// add_repeating_timer_ms(TIMER_DLY_MS, &timer_isr, NULL, &timer);
 
 	while (true) {
-		sleep_ms(248);
+		sleep_ms(100);
 		scan_matrix();
     }
 }
@@ -190,6 +191,8 @@ void scan_matrix() {
 	// }
 	// PrevBtnTime_ms = CurrTime_ms;
 
+	bool temp;
+	int keyStatus = 0b00;
 #if DIODE_DIRECTION == ROW2COL
 	gpio_put(COL1_PIN, 0);
 	sleep_ms(2);
@@ -203,16 +206,41 @@ void scan_matrix() {
 #elif DIODE_DIRECTION == COL2ROW
 	gpio_put(ROW1_PIN, 0);
 	sleep_ms(1);
-	if (!gpio_get(COL1_PIN)) {
-		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
-	}
+	temp = gpio_get(COL1_PIN);
+	keyStatus |= temp ? 0b01 : 0;
+	//if (!gpio_get(COL1_PIN)) {
+	//	pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
+	//}
 	gpio_put(ROW1_PIN, 1);
 	gpio_put(ROW2_PIN, 0);
 	sleep_ms(1);
-	if (!gpio_get(COL1_PIN)) {
-		pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
-	}
+	temp = gpio_get(COL1_PIN);
+	keyStatus |= temp ? 0b10 : 0;
+	//if (!gpio_get(COL1_PIN)) {
+	//	pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
+	//}
 	gpio_put(ROW2_PIN, 1);
+
+	if (keyStatus == 0b00) {
+		put_pixel(0x00000);
+		put_pixel(0x00100);
+		put_pixel(0x00100);
+	}
+	else if (keyStatus == 0b01) {
+		put_pixel(0x00000);
+		put_pixel(0x10001);
+		put_pixel(0x10001);
+	}
+	else if (keyStatus == 0b10) {
+		put_pixel(0x00000);
+		put_pixel(0x00101);
+		put_pixel(0x00101);
+	}
+	else {	// 0b11
+		put_pixel(0x00000);
+		put_pixel(0x10000);
+		put_pixel(0x10000);
+	}
 #endif
 }
 
