@@ -9,14 +9,11 @@
 #include "SJ_CenterPiece.pio.h"
 
 // Keyboard Inputs
-#define COL1_PIN 14
+// Hardware shorted together to test other GPIO pins COL1_PIN now GPIO12, 13, 14 correct pin is nominally 14
+#define COL1_PIN 13
 
 #define ROW1_PIN 16
 #define ROW2_PIN 17
-
-#define ROW2COL 0
-#define COL2ROW 1
-#define DIODE_DIRECTION COL2ROW
 
 // WS2812 Config
 #define IS_RGBW false
@@ -37,7 +34,7 @@ const float Breathing_Beta = 0.5;
 
 unsigned pattern_idx = 0;
 
-#define MIN_IRQ_DEBOUNCE_DLY_MS 50
+// #define MIN_IRQ_DEBOUNCE_DLY_MS 50
 // uint32_t PrevBtnTime_ms;
 
 void scan_matrix();
@@ -53,67 +50,47 @@ static inline uint8_t get_breathe_scalar() {
 	return (uint8_t)pwm_val;
 }
 
-void pattern_breathing(uint NumPixels) {
-	uint32_t breathe_val = 0x10101 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
+static inline void write_full_string(uint32_t breathe_val, int NumPixels) {
+	put_pixel(0x00000);	// Disable first pixel shouting in your face
+    for (int i = 1; i < NumPixels; ++i) {
 		// Pixel: as u32 _grb
         put_pixel(breathe_val);
     }
+}
+
+void pattern_breathing(uint NumPixels) {
+	uint32_t breathe_val = 0x10101 * get_breathe_scalar(PstnInBreathing);
+	write_full_string(breathe_val, NumPixels);
 }
 
 void pattern_breathing_color_r(uint NumPixels) {
 	uint32_t breathe_val = 0x00100 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
-		// Pixel: as u32 _grb
-        put_pixel(breathe_val);
-    }
+	write_full_string(breathe_val, NumPixels);
 }
 
 void pattern_breathing_color_y(uint NumPixels) {
 	uint32_t breathe_val = 0x10100 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
-		// Pixel: as u32 _grb
-        put_pixel(breathe_val);
-    }
+	write_full_string(breathe_val, NumPixels);
 }
 
 void pattern_breathing_color_g(uint NumPixels) {
 	uint32_t breathe_val = 0x10000 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
-		// Pixel: as u32 _grb
-        put_pixel(breathe_val);
-    }
+	write_full_string(breathe_val, NumPixels);
 }
 
 void pattern_breathing_color_c(uint NumPixels) {
 	uint32_t breathe_val = 0x10001 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
-		// Pixel: as u32 _grb
-        put_pixel(breathe_val);
-    }
+	write_full_string(breathe_val, NumPixels);
 }
 
 void pattern_breathing_color_b(uint NumPixels) {
 	uint32_t breathe_val = 0x00001 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
-		// Pixel: as u32 _grb
-        put_pixel(breathe_val);
-    }
+	write_full_string(breathe_val, NumPixels);
 }
 
 void pattern_breathing_color_m(uint NumPixels) {
 	uint32_t breathe_val = 0x00101 * get_breathe_scalar(PstnInBreathing);
-
-    for (int i = 0; i < NumPixels; ++i) {
-		// Pixel: as u32 _grb
-        put_pixel(breathe_val);
-    }
+	write_full_string(breathe_val, NumPixels);
 }
 
 typedef void (*pattern)(uint NumPixels);
@@ -134,30 +111,28 @@ int main() {
     printf("Startup...\n");
     //uart_default_tx_wait_blocking();
 
-#if DIODE_DIRECTION == ROW2COL
-	gpio_init(COL1_PIN);
-	gpio_set_dir(COL1_PIN, GPIO_OUT);
-	gpio_put(COL1_PIN, 1);
-
-	gpio_init(ROW1_PIN);
-	gpio_init(ROW2_PIN);
-	gpio_set_dir(ROW1_PIN, GPIO_IN);
-	gpio_set_dir(ROW2_PIN, GPIO_IN);
-	gpio_pull_up(ROW1_PIN);
-	gpio_pull_up(ROW2_PIN);
-#elif DIODE_DIRECTION == COL2ROW
+	// For COL2ROW, QMK style, should be pull-up on the column,
+	// However, pull-up on this pin seems to have been burnt during rework
+	// Pull-down is apparently functional
 	gpio_init(COL1_PIN);
 	gpio_set_dir(COL1_PIN, GPIO_IN);
-	gpio_pull_up(COL1_PIN);
-	//gpio_pull_down(COL1_PIN);
+	// gpio_pull_up(COL1_PIN);
+	gpio_pull_down(COL1_PIN);
 
 	gpio_init(ROW1_PIN);
 	gpio_init(ROW2_PIN);
 	gpio_set_dir(ROW1_PIN, GPIO_OUT);
 	gpio_set_dir(ROW2_PIN, GPIO_OUT);
-	gpio_put(ROW1_PIN, 1);
-	gpio_put(ROW2_PIN, 1);
-#endif
+	// gpio_put(ROW1_PIN, 1);
+	// gpio_put(ROW2_PIN, 1);
+	gpio_put(ROW1_PIN, 0);
+	gpio_put(ROW2_PIN, 0);
+	// gpio_set_dir(ROW1_PIN, GPIO_IN);
+	// gpio_set_dir(ROW2_PIN, GPIO_IN);
+	// gpio_pull_up(ROW1_PIN);
+	// gpio_pull_up(ROW2_PIN);
+	// gpio_pull_down(ROW1_PIN);
+	// gpio_pull_down(ROW2_PIN);
 
 	// Connect button handler to receive button presses and advance the light pattern
 	// PrevBtnTime_ms = to_ms_since_boot(get_absolute_time());
@@ -171,77 +146,67 @@ int main() {
 
     ws2812_program_init(pio, sm, offset, PICO_DEFAULT_WS2812_PIN, 800000, IS_RGBW);
 
-	// add_repeating_timer_ms(TIMER_DLY_MS, &timer_isr, NULL, &timer);
+	add_repeating_timer_ms(TIMER_DLY_MS, &timer_isr, NULL, &timer);
 
 	while (true) {
-		sleep_ms(100);
+		sleep_ms(200);
 		scan_matrix();
     }
 }
 
 void scan_matrix() {
-	// // NOTE: Math with CurrTime in ms stored in u32 could have troubles at overflow,
-	// // ~50 days of ms ticks should fit into u32, no worries on battery powerd system running for a few hours. -2023Nov23jhamermesh
-	// uint32_t CurrTime_ms = to_ms_since_boot(get_absolute_time());
-	// int32_t DeltaISR_ms = CurrTime_ms - PrevBtnTime_ms;
-	//printf("Button ISR: events[%X], PrevTime[%u], CurrTime[%u]\n", events, PrevBtnTime_ms, CurrTime_ms);
-	
-	// if (DeltaISR_ms < MIN_IRQ_DEBOUNCE_DLY_MS) {
-	// 	return;
-	// }
-	// PrevBtnTime_ms = CurrTime_ms;
+	// bool temp;
+	// int keyStatus = 0b00;
 
-	bool temp;
-	int keyStatus = 0b00;
-#if DIODE_DIRECTION == ROW2COL
-	gpio_put(COL1_PIN, 0);
-	sleep_ms(2);
-	if (gpio_get(!ROW1_PIN)) {
+	// NOTE: QMK COL2ROW should have pull-ups so rows are driven low for scanning
+	// With broken pull-ups, pull-down is used and rows are scanned high
+	gpio_put(ROW1_PIN, 1);
+	sleep_ms(1);
+	// temp = gpio_get(COL1_PIN);
+	// keyStatus |= temp ? 0b01 : 0;
+	if (gpio_get(COL1_PIN)) {
 		pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
 	}
-	if (gpio_get(!ROW2_PIN)) {
-		pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
-	}
-	gpio_put(COL1_PIN, 1);
-#elif DIODE_DIRECTION == COL2ROW
 	gpio_put(ROW1_PIN, 0);
-	sleep_ms(1);
-	temp = gpio_get(COL1_PIN);
-	keyStatus |= temp ? 0b01 : 0;
-	//if (!gpio_get(COL1_PIN)) {
-	//	pattern_idx = ((pattern_idx + 1) == pattern_cnt) ? 0 : pattern_idx + 1;
-	//}
-	gpio_put(ROW1_PIN, 1);
-	gpio_put(ROW2_PIN, 0);
-	sleep_ms(1);
-	temp = gpio_get(COL1_PIN);
-	keyStatus |= temp ? 0b10 : 0;
-	//if (!gpio_get(COL1_PIN)) {
-	//	pattern_idx = (pattern_idx == 0) ? pattern_cnt : pattern_idx - 1;
-	//}
 	gpio_put(ROW2_PIN, 1);
+	sleep_ms(1);
+	// temp = gpio_get(COL1_PIN);
+	// keyStatus |= temp ? 0b10 : 0;
+	if (gpio_get(COL1_PIN)) {
+		pattern_idx = (pattern_idx == 0) ? (pattern_cnt - 1) : (pattern_idx - 1);
+	}
+	gpio_put(ROW2_PIN, 0);
 
-	if (keyStatus == 0b00) {
-		put_pixel(0x00000);
-		put_pixel(0x00100);
-		put_pixel(0x00100);
-	}
-	else if (keyStatus == 0b01) {
-		put_pixel(0x00000);
-		put_pixel(0x10001);
-		put_pixel(0x10001);
-	}
-	else if (keyStatus == 0b10) {
-		put_pixel(0x00000);
-		put_pixel(0x00101);
-		put_pixel(0x00101);
-	}
-	else {	// 0b11
-		put_pixel(0x00000);
-		put_pixel(0x10000);
-		put_pixel(0x10000);
-	}
-#endif
+    /*
+	 * // Red
+	 * if (keyStatus == 0b00) {
+	 * 	// put_pixel(0x00000);
+	 * 	put_pixel(0x00100);
+	 * 	put_pixel(0x00100);
+	 * 	put_pixel(0x00100);
+	 * }
+	 * // Cyan
+	 * else if (keyStatus == 0b01) {
+	 * 	// put_pixel(0x00000);
+	 * 	put_pixel(0x10001);
+	 * 	put_pixel(0x10001);
+	 * 	put_pixel(0x10001);
+	 * }
+	 * // Magenta
+	 * else if (keyStatus == 0b10) {
+	 * 	// put_pixel(0x00000);
+	 * 	put_pixel(0x00101);
+	 * 	put_pixel(0x00101);
+	 * 	put_pixel(0x00101);
+	 * }
+	 * // Green
+	 * else {	// 0b11
+	 * 	// put_pixel(0x00000);
+	 * 	put_pixel(0x10000);
+	 * 	put_pixel(0x10000);
+	 * 	put_pixel(0x10000);
+	 * }
+     */
 }
 
 bool timer_isr(struct repeating_timer *t) {
